@@ -12,6 +12,15 @@ using Microsoft.Bot.Builder.Dialogs;
 using Microsoft.Bot.Schema;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using BasicBot.Model;
+using AdaptiveCards;
+using BasicBot.Cards;
+using BasicBot.Model;
+using cards = BasicBot.Cards;
+using Microsoft.Bot.Connector;
+using Newtonsoft.Json.Linq;
+using BasicBot.AttachmentCard;
+using BasicBot.LUISEntity;
 
 namespace Microsoft.BotBuilderSamples
 {
@@ -20,20 +29,32 @@ namespace Microsoft.BotBuilderSamples
     /// </summary>
     public class BasicBot : IBot
     {
+        LUISEntity entity = new LUISEntity();
+        Employee emp = new Employee();
+        AttachmentCard attachment = new AttachmentCard();
+
         // Supported LUIS Intents
         public const string GreetingIntent = "Greeting";
         public const string CancelIntent = "Cancel";
         public const string HelpIntent = "Help";
         public const string NoneIntent = "None";
         public const string GetWeather = "GetWeather";
-        public const string Apply4job = "ApplyForJob";
+        public const string EmergencyNumber = "EmergencyNumber";
+        public const string GetAllEmployee = "GetAllEmployee";
+        public const string EmployeeDetail = "EmployeeDetail";
+        public const string EmployeeExperience = "EmployeeExperience";
+        public const string EmployeeAddress = "EmployeeAddress";
+        public const string EmployeeBirthDay = "EmployeeBirthDay";
+        public const string EmployeeUpcomingEvents = "EmployeeUpcomingEvents";
+        public const string EmployeeProject = "EmployeeProject";
+        public const string EmployeeAnniversaries = "EmployeeAnniversaries";
+        public const string GetTrainee = "GetTrainee";
 
         /// <summary>
         /// Key in the bot config (.bot file) for the LUIS instance.
         /// In the .bot file, multiple instances of LUIS can be configured.
         /// </summary>
         public static readonly string LuisConfiguration = "IdsWebAppBot-bede";
-
         private readonly IStatePropertyAccessor<GreetingState> _greetingStateAccessor;
         private readonly IStatePropertyAccessor<DialogState> _dialogStateAccessor;
         private readonly UserState _userState;
@@ -94,7 +115,7 @@ namespace Microsoft.BotBuilderSamples
                 await UpdateGreetingState(luisResults, dc.Context);
 
                 // Handle conversation interrupts first.
-                var interrupted = await IsTurnInterruptedAsync(dc, topIntent);
+                var interrupted = await IsTurnInterruptedAsync(dc, topIntent, turnContext, cancellationToken);
                 if (interrupted)
                 {
                     // Bypass the dialog.
@@ -117,7 +138,9 @@ namespace Microsoft.BotBuilderSamples
                             switch (topIntent)
                             {
                                 case GreetingIntent:
-                                    await dc.BeginDialogAsync(nameof(GreetingDialog));
+                                    await dc.Context.SendActivityAsync("Hi Ankesh! Ask me questions about your team");
+
+                                    // await dc.BeginDialogAsync(nameof(GreetingDialog));
                                     break;
 
                                 case NoneIntent:
@@ -155,7 +178,7 @@ namespace Microsoft.BotBuilderSamples
                         // To learn more about Adaptive Cards, see https://aka.ms/msbot-adaptivecards for more details.
                         if (member.Id != activity.Recipient.Id)
                         {
-                            var welcomeCard = CreateAdaptiveCardAttachment();
+                            var welcomeCard = attachment.IDSWelcomeCard();
                             var response = CreateResponse(activity, welcomeCard);
                             await dc.Context.SendActivityAsync(response);
                         }
@@ -168,8 +191,11 @@ namespace Microsoft.BotBuilderSamples
         }
 
         // Determine if an interruption has occurred before we dispatch to any active dialog.
-        private async Task<bool> IsTurnInterruptedAsync(DialogContext dc, string topIntent)
+        private async Task<bool> IsTurnInterruptedAsync(DialogContext dc, string topIntent, ITurnContext turnContext, CancellationToken cancellationToken)
         {
+            var luisResults = await _services.LuisServices[LuisConfiguration].RecognizeAsync(dc.Context, cancellationToken);
+            var activity = turnContext.Activity;
+
             // See if there are any conversation interrupts we need to handle.
             if (topIntent.Equals(CancelIntent))
             {
@@ -186,9 +212,25 @@ namespace Microsoft.BotBuilderSamples
                 return true;        // Handled the interrupt.
             }
 
+            // Weather Update
             if (topIntent.Equals(GetWeather))
             {
-                await dc.Context.SendActivityAsync("Getting weather info..");
+                var reply = turnContext.Activity.CreateReply();
+
+                // Create an attachment.
+                var attachment = new Attachment
+                {
+                    ContentUrl = "https://imagejournal.org/wp-content/uploads/bb-plugin/cache/23466317216_b99485ba14_o-panorama.jpg",
+                    ContentType = "image/jpg",
+                };
+
+                // Add the attachment to our reply.
+                reply.Attachments = new List<Attachment>() { attachment };
+
+                // Send the activity to the user.
+                await turnContext.SendActivityAsync(reply);
+
+                // await dc.Context.SendActivityAsync("Getting weather info..");
                 if (dc.ActiveDialog != null)
                 {
                     await dc.RepromptDialogAsync();
@@ -197,10 +239,441 @@ namespace Microsoft.BotBuilderSamples
                 return true;
             }
 
+            // EmergencyNo
+            if (topIntent.Equals(EmergencyNumber))
+            {
+                if (turnContext.Activity.Text.Contains("police"))
+                {
+                    await dc.Context.SendActivityAsync("Police Helpline No: 100");
+                }
+                else if (turnContext.Activity.Text.Contains("fire"))
+                {
+                    await dc.Context.SendActivityAsync("Fire Helpline No: 101");
+                }
+                else if (turnContext.Activity.Text.Contains("women"))
+                {
+                    await dc.Context.SendActivityAsync("Women Helpline No: 1091");
+                }
+                else
+                {
+                    var card = attachment.HelplineCard();
+                    var response = CreateResponse(activity, card);
+                    await dc.Context.SendActivityAsync(response);
+                }
+
+                if (dc.ActiveDialog != null)
+                {
+                    await dc.RepromptDialogAsync();
+                }
+
+                return true;
+            }
+
+            // Help Intent
             if (topIntent.Equals(HelpIntent))
             {
                 await dc.Context.SendActivityAsync("Let me try to provide some help.");
                 await dc.Context.SendActivityAsync("I understand greetings, being asked for help, or being asked to cancel what I am doing.");
+                if (dc.ActiveDialog != null)
+                {
+                    await dc.RepromptDialogAsync();
+                }
+
+                return true;        // Handled the interrupt.
+            }
+
+            // Get All Employees
+            if (topIntent.Equals(GetAllEmployee))
+            {
+                string empName = turnContext.Activity.Text;
+                var employee = emp.GetEmployeeListByName(empName);
+
+                if (employee.Count > 1)
+                {
+                    var reply = turnContext.Activity.CreateReply("Which employee do you want to know?");
+
+                    reply.SuggestedActions = new SuggestedActions();
+                    reply.SuggestedActions.Actions = new List<CardAction>();
+                    foreach (EmployeeModel model in employee)
+                    {
+                    reply.SuggestedActions.Actions.Add
+                    (
+                    new CardAction() { Title = model.Name, Type = ActionTypes.ImBack, Value = model.Name }
+                    );
+                    }
+
+                    await turnContext.SendActivityAsync(reply, cancellationToken);
+                }
+                else
+                {
+                    var entityFound = entity.GetAllEmployeeEntities(luisResults);
+                    foreach (KeyValuePair<int, string> data in entityFound)
+                    {
+                    if (data.Key == 1)
+                    {
+                        await dc.Context.SendActivityAsync(data.Value);
+                    }
+                    else if (data.Key == 2)
+                    {
+                        var card = attachment.GetEmployeeDetailsByName(data.Value);
+                        var response = CreateResponse(activity, card);
+                        await dc.Context.SendActivityAsync(response);
+                    }
+                    else if (data.Key == 3)
+                    {
+                        int id = int.Parse(data.Value);
+                        int employeeId = emp.GetEmployeeId(id);
+                        if (employeeId != 0)
+                            {
+                                var card = attachment.GetEmployeeDetailsById(id);
+                                var response = CreateResponse(activity, card);
+                                await dc.Context.SendActivityAsync(response);
+                            }
+                            else
+                            {
+                                await dc.Context.SendActivityAsync("Please enter valid Employee Id");
+                            }
+                    }
+                    else if (data.Key == 4)
+                    {
+                         var card = attachment.GetMaleEmployees();
+                         var response = CreateResponse(activity, card);
+                         await dc.Context.SendActivityAsync(response);
+                    }
+                    else if (data.Key == 5)
+                    {
+                         var card = attachment.GetFemaleEmployees();
+                         var response = CreateResponse(activity, card);
+                         await dc.Context.SendActivityAsync(response);
+                    }
+                    else if (data.Key == 6)
+                    {
+                         var card = attachment.AllEmployeesCard();
+                         var response = CreateResponse(activity, card);
+                         await dc.Context.SendActivityAsync(response);
+                    }
+                    }
+                }
+
+                if (dc.ActiveDialog != null)
+                {
+                    await dc.RepromptDialogAsync();
+                }
+
+                return true;        // Handled the interrupt.
+            }
+
+            // Upcoming Birthday, Anniversaries
+            if (topIntent.Equals(EmployeeUpcomingEvents))
+            {
+                if (turnContext.Activity.Text.ToLower() == "upcoming")
+                {
+                    var reply = turnContext.Activity.CreateReply("Which upcoming event do you want to know?");
+
+                    reply.SuggestedActions = new SuggestedActions()
+                    {
+                        Actions = new List<CardAction>()
+                    {
+                         new CardAction() { Title = "Upcoming Anniversary", Type = ActionTypes.ImBack, Value = "Upcoming Anniversary" },
+                         new CardAction() { Title = "Upcoming Birthday", Type = ActionTypes.ImBack, Value = "Upcoming Birthday" },
+                    },
+                    };
+                    await turnContext.SendActivityAsync(reply, cancellationToken);
+                }
+                else
+                {
+                    var entityFound = entity.EmployeeUpcomingEventsEntities(luisResults);
+
+                    if (entityFound.ToString().Equals("birthday"))
+                    {
+                        var card = attachment.GetUpcomingBirthday();
+                        var response = CreateResponse(activity, card);
+                        await dc.Context.SendActivityAsync(response);
+                    }
+                    else if (entityFound.ToString().Equals("anniversary"))
+                    {
+                        var card = attachment.GetUpcomingAnniversaries();
+                        var response = CreateResponse(activity, card);
+                        await dc.Context.SendActivityAsync(response);
+                    }
+                }
+
+                if (dc.ActiveDialog != null)
+                {
+                    await dc.RepromptDialogAsync();
+                }
+
+                return true;        // Handled the interrupt.
+            }
+
+            // Age, DOB
+            if (topIntent.Equals(EmployeeBirthDay))
+            {
+                var entityFound = entity.EmployeeBirthDayEntities(luisResults);
+
+                if (entityFound.ToString() != string.Empty)
+                {
+                    await turnContext.SendActivityAsync(entityFound);
+                }
+
+                if (dc.ActiveDialog != null)
+                {
+                    await dc.RepromptDialogAsync();
+                }
+
+                return true;        // Handled the interrupt.
+            }
+
+            // All Projects, Specific Project
+            if (topIntent.Equals(EmployeeProject))
+            {
+                var entityFound = entity.EmployeeProjectEntities(luisResults);
+
+                if (entityFound != null)
+                {
+                    foreach (KeyValuePair<int, string> project in entityFound)
+                    {
+                        if (project.Key == 1)
+                        {
+                            string employeeName = project.Value;
+                            var employee = emp.GetEmployeeListByName(employeeName);
+
+                            if (employee.Count > 1)
+                            {
+                                var reply = turnContext.Activity.CreateReply("Which employee do you want to know?");
+
+                                reply.SuggestedActions = new SuggestedActions();
+                                reply.SuggestedActions.Actions = new List<CardAction>();
+                                foreach (EmployeeModel model in employee)
+                                {
+                                    reply.SuggestedActions.Actions.Add
+                                    (
+                                    new CardAction() { Title = model.Name, Type = ActionTypes.ImBack, Value = "projects of " + model.Name }
+                                    );
+                                }
+
+                                await turnContext.SendActivityAsync(reply, cancellationToken);
+                            }
+                            else
+                            {
+                                string projectName = emp.GetProjectByName(project.Value);
+                                await turnContext.SendActivityAsync($"{projectName}\n");
+                            }
+                        }
+                        else if (project.Key == 2)
+                        {
+                            await turnContext.SendActivityAsync($"Total Number of Projects are: {project.Value}\n");
+                        }
+                    }
+                }
+                else
+                {
+                    var card = attachment.GetProject();
+                    var response = CreateResponse(activity, card);
+                    await dc.Context.SendActivityAsync(response);
+                }
+
+                if (dc.ActiveDialog != null)
+                {
+                    await dc.RepromptDialogAsync();
+                }
+
+                return true;        // Handled the interrupt.
+            }
+
+            // Designation, Last company, Email, Detail Info, Contact No
+            if (topIntent.Equals(EmployeeDetail))
+            {
+                var entityFound = entity.EmployeeDetailEntities(luisResults);
+
+                if (entityFound.ToString() != string.Empty)
+                {
+                    await turnContext.SendActivityAsync($"{entityFound}\n");
+                }
+
+                if (dc.ActiveDialog != null)
+                {
+                    await dc.RepromptDialogAsync();
+                }
+
+                return true;        // Handled the interrupt.
+            }
+
+            // Anniversaries
+            if (topIntent.Equals(EmployeeAnniversaries))
+            {
+                var entityFound = entity.EmployeeAnniversariesEntities(luisResults);
+
+                if (entityFound.ToString() != string.Empty)
+                {
+                    if (entityFound.ToString().Equals("anniversary"))
+                    {
+                        var card = attachment.GetEmployeeAnniversaries();
+                        var response = CreateResponse(activity, card);
+                        await dc.Context.SendActivityAsync(response);
+                    }
+                    else if (entityFound.ToString() != "anniversary")
+                    {
+                        await turnContext.SendActivityAsync($"{entityFound}\n");
+                    }
+                }
+
+                if (dc.ActiveDialog != null)
+                {
+                    await dc.RepromptDialogAsync();
+                }
+
+                return true;        // Handled the interrupt.
+            }
+
+            // Full Address, Search by City
+            if (topIntent.Equals(EmployeeAddress))
+            {
+                var entityFound = entity.EmployeeAddressEntities(luisResults);
+
+                foreach (KeyValuePair<int, string> employee in entityFound)
+                {
+                    if (employee.Key == 1)
+                    {
+                        await dc.Context.SendActivityAsync($"{employee.Value}");
+                    }
+                    else if (employee.Key == 2)
+                    {
+                        var card = attachment.GetEmployeeByCity(employee.Value);
+                        var response = CreateResponse(activity, card);
+                        await dc.Context.SendActivityAsync(response);
+                    }
+                    else
+                    {
+                        await dc.Context.SendActivityAsync("No entity found");
+                    }
+                }
+
+                if (dc.ActiveDialog != null)
+                {
+                    await dc.RepromptDialogAsync();
+                }
+
+                return true;        // Handled the interrupt.
+            }
+
+            // DOJ, Experience Per Employee
+            if (topIntent.Equals(EmployeeExperience))
+            {
+                Dictionary<int, string> record = entity.EmployeeExperienceEntities(luisResults);
+                foreach (KeyValuePair<int, string> data in record)
+                {
+                    if (data.Value != null)
+                    {
+                        if (data.Key == 1)
+                        {
+                            string employeeName = data.Value;
+                            var employee = emp.GetEmployeeListByName(employeeName);
+
+                            if (employee.Count > 1)
+                            {
+                                var reply = turnContext.Activity.CreateReply("Which employee do you want to know?");
+
+                                reply.SuggestedActions = new SuggestedActions();
+                                reply.SuggestedActions.Actions = new List<CardAction>();
+                                foreach (EmployeeModel model in employee)
+                                {
+                                    reply.SuggestedActions.Actions.Add
+                                    (
+                                    new CardAction() { Title = model.Name, Type = ActionTypes.ImBack, Value = "experience of " + model.Name }
+                                    );
+                                }
+
+                                await turnContext.SendActivityAsync(reply, cancellationToken);
+                            }
+                            else
+                            {
+                                float exp = emp.GetEmployeeExperience(data.Value);
+                                if (exp == 0)
+                                {
+                                    await turnContext.SendActivityAsync(data.Value + " is a Trainee");
+                                }
+                                else
+                                {
+                                    await turnContext.SendActivityAsync($"{exp}" + " years");
+                                }
+                            }
+                        }
+                        else if (data.Key == 2)
+                        {
+                            var card = attachment.GetEmployeeExperience();
+                            var response = CreateResponse(activity, card);
+                            await dc.Context.SendActivityAsync(response);
+                        }
+                        else if (data.Key == 3)
+                        {
+                            string empName = data.Value;
+                            var employee = emp.GetEmployeeListByName(empName);
+
+                            if (employee.Count > 1)
+                            {
+                                var reply = turnContext.Activity.CreateReply("Which employee do you want to know?");
+
+                                reply.SuggestedActions = new SuggestedActions();
+                                reply.SuggestedActions.Actions = new List<CardAction>();
+                                foreach (EmployeeModel model in employee)
+                                {
+                                    reply.SuggestedActions.Actions.Add
+                                    (
+                                    new CardAction() { Title = model.Name, Type = ActionTypes.ImBack, Value = "doj of " + model.Name }
+                                    );
+                                }
+
+                                await turnContext.SendActivityAsync(reply, cancellationToken);
+                            }
+                            else
+                            {
+                                DateTime doj = emp.GetEmployeeDOJ(data.Value);
+                                string date = doj.ToString("MM/dd/yyyy");
+                                await turnContext.SendActivityAsync($"{date}");
+                            }
+                        }
+                        else if (data.Key == 4)
+                        {
+                            float experience = float.Parse(data.Value);
+                            var card = attachment.GetEmployeeMax(experience);
+                            var response = CreateResponse(activity, card);
+                            await dc.Context.SendActivityAsync(response);
+                        }
+                        else if (data.Key == 5)
+                        {
+                            float experience = float.Parse(data.Value);
+                            var card = attachment.GetEmployeeMin(experience);
+                            var response = CreateResponse(activity, card);
+                            await dc.Context.SendActivityAsync(response);
+                        }
+                    }
+                }
+
+                if (dc.ActiveDialog != null)
+                {
+                    await dc.RepromptDialogAsync();
+                }
+
+                return true;        // Handled the interrupt.
+            }
+
+            // Get Trainee
+            if (topIntent.Equals(GetTrainee))
+            {
+                var entityFound = entity.GetAllTraineeEntities(luisResults);
+
+                if (entityFound.ToString() != "trainee")
+                {
+                    await dc.Context.SendActivityAsync($"{entityFound}");
+                }
+                else if (entityFound.ToString().Equals("trainee"))
+                {
+                    var card = attachment.GetTrainees();
+                    var response = CreateResponse(activity, card);
+                    await dc.Context.SendActivityAsync(response);
+                }
+
                 if (dc.ActiveDialog != null)
                 {
                     await dc.RepromptDialogAsync();
@@ -218,17 +691,6 @@ namespace Microsoft.BotBuilderSamples
             var response = activity.CreateReply();
             response.Attachments = new List<Attachment>() { attachment };
             return response;
-        }
-
-        // Load attachment from file.
-        private Attachment CreateAdaptiveCardAttachment()
-        {
-            var adaptiveCard = File.ReadAllText(@".\Dialogs\Welcome\Resources\welcomeCard.json");
-            return new Attachment()
-            {
-                ContentType = "application/vnd.microsoft.card.adaptive",
-                Content = JsonConvert.DeserializeObject(adaptiveCard),
-            };
         }
 
         /// <summary>

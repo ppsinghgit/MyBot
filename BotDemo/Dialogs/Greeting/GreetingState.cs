@@ -11,7 +11,5 @@ namespace Microsoft.BotBuilderSamples
         public string Name { get; set; }
 
         public string City { get; set; }
-
-        public string Job { get; set; }
     }
 }

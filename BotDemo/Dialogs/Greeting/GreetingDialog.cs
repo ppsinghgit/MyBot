@@ -101,7 +101,7 @@ namespace Microsoft.BotBuilderSamples
                     Prompt = new Activity
                     {
                         Type = ActivityTypes.Message,
-                        Text = "What is your name?",
+                        Text = "Hi Ankesh! Ask me questions about your team",
                     },
                 };
                 return await stepContext.PromptAsync(NamePrompt, opts);
@@ -136,6 +136,7 @@ namespace Microsoft.BotBuilderSamples
                         Text = $"Hello {greetingState.Name}, what city do you live in?",
                     },
                 };
+
                 return await stepContext.PromptAsync(CityPrompt, opts);
             }
             else

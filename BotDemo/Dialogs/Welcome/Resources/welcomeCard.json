@@ -1,0 +1,41 @@
+{
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "type": "AdaptiveCard",
+  "version": "1.0",
+  "body": [
+    {
+      "type": "Image",
+      "url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcREXxfepKpqFFCoNNdOkzhEcJBEZqjRfaUkpB--olgqn9k0MiNR",
+      "size": "stretch"
+    },
+    {
+      "type": "TextBlock",
+      "spacing": "medium",
+      "size": "default",
+      "weight": "bolder",
+      "text": "Welcome to IDS Bot!",
+      "wrap": true,
+      "maxLines": 0
+    },
+    {
+      "type": "TextBlock",
+      "size": "default",
+      "isSubtle": "yes",
+      "text": "Ask me a question.",
+      "wrap": true,
+      "maxLines": 0
+    }
+  ],
+  "actions": [
+    {
+      "type": "Action.OpenUrl",
+      "title": "About IDS",
+      "url": "https://ids-technologies.in/"
+    },
+    {
+      "type": "Action.OpenUrl",
+      "title": "Contact Us",
+      "url": "https://ids-technologies.in/contact-us/"
+    }
+  ]
+}

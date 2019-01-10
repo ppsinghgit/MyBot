@@ -1,0 +1,30 @@
+{
+	"$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+	"type": "AdaptiveCard",
+	"version": "1.0",
+	"body": [
+		{
+			"type": "TextBlock",
+			"text": "Helpline Numbers:",
+			"weight": "bolder",
+			"size": "medium"
+		},
+		{
+			"type": "FactSet",
+			"facts": [
+				{
+					"title": "Police:",
+					"value": "100"
+				},
+				{
+					"title": "Fire:",
+					"value": "101"
+				},
+				{
+					"title": "Women Helpline:",
+					"value": "1091"
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,84 @@
+{
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "type": "AdaptiveCard",
+  "version": "1.0",
+  "body": [
+    {
+      "type": "ColumnSet",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "20",
+          "items": [
+            {
+              "type": "TextBlock",
+              "horizontalAlignment": "center",
+              "wrap": false,
+              "text": "Fri"
+            },
+            {
+              "type": "TextBlock",
+              "horizontalAlignment": "center",
+              "wrap": false,
+              "text": "62"
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "20",
+          "items": [
+            {
+              "type": "TextBlock",
+              "horizontalAlignment": "center",
+              "wrap": false,
+              "text": "Sat"
+            },
+            {
+              "type": "TextBlock",
+              "horizontalAlignment": "center",
+              "wrap": false,
+              "text": "60"
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "20",
+          "items": [
+            {
+              "type": "TextBlock",
+              "horizontalAlignment": "center",
+              "wrap": false,
+              "text": "Sun"
+            },
+            {
+              "type": "TextBlock",
+              "horizontalAlignment": "center",
+              "wrap": false,
+              "text": "59"
+            }
+          ]
+        },
+        {
+          "type": "Column",
+          "width": "20",
+          "items": [
+            {
+              "type": "TextBlock",
+              "horizontalAlignment": "center",
+              "wrap": false,
+              "text": "Mon"
+            },
+            {
+              "type": "TextBlock",
+              "horizontalAlignment": "center",
+              "wrap": false,
+              "text": "64"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
